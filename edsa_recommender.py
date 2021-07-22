@@ -87,18 +87,10 @@ imdb_df['title_cast'] = imdb_df['title_cast'].str.split('|')
 # title_cast = title_cast.reset_index([0, 'movieId'])
 # title_cast.columns = ['movieId', 'title_cast']
 
-        
 
+filter_list = ['Content Based Filtering', 'Collaborative Based Filtering']
 
-
-
-
-filter_list = ['Content Based Filtering', 'Collaborative Based Filtering', '1']
-
-
-
-
-
+ 
 # App declaration
 def main():
 
@@ -111,19 +103,65 @@ def main():
     # -------------------------------------------------------------------
     st.set_page_config(layout="wide")
     page_selection = st.sidebar.selectbox("Choose Option", page_options)
+
     if page_selection == "Recommender System":
         # Header contents
         st.write('# Movie Recommender Engine')
         st.write('### EXPLORE Data Science Academy Unsupervised Predict')
-        # st.image('resources/imgs/popcorn.png',use_column_width=True)
-        st.image('resources/videos/popcorn_gif_2.gif',use_column_width=True)
-        # st.video('https://www.youtube.com/watch?v=To4f-ODZmIE')
-
+        st.image('resources/imgs/Image_header.png',use_column_width=True)
         # Recommender System algorithm selection
-
-        sys = st.radio("Select an algorithm", filter_list)
+        sys = st.radio("Select an algorithm",
+                       ('Content Based Filtering',
+                        'Collaborative Based Filtering'))
 
         # User-based preferences
+        st.write('### Enter Your Three Favorite Movies')
+        movie_1 = st.selectbox('Fisrt Option',title_list[14930:15200])
+        movie_2 = st.selectbox('Second Option',title_list[25055:25255])
+        movie_3 = st.selectbox('Third Option',title_list[21100:21200])
+        fav_movies = [movie_1,movie_2,movie_3]
+
+        # Perform top-10 movie recommendation generation
+        if sys == 'Content Based Filtering':
+            if st.button("Recommend"):
+                try:
+                    with st.spinner('Crunching the numbers...'):
+                        top_recommendations = content_model(movie_list=fav_movies,
+                                                            top_n=10)
+                    st.title("We think you'll like:")
+                    for i,j in enumerate(top_recommendations):
+                        st.subheader(str(i+1)+'. '+j)
+                except:
+                    st.error("Oops! Looks like this algorithm does't work.\
+                              We'll need to fix it!")
+
+
+        if sys == 'Collaborative Based Filtering':
+            if st.button("Recommend"):
+                try:
+                    with st.spinner('Crunching the numbers...'):
+                        top_recommendations = collab_model(movie_list=fav_movies,
+                                                           top_n=10)
+                    st.title("We think you'll like:")
+                    for i,j in enumerate(top_recommendations):
+                        st.subheader(str(i+1)+'. '+j)
+                except:
+                    st.error("Oops! Looks like this algorithm does't work.\
+                              We'll need to fix it!")
+
+
+    # -------------------------------------------------------------------
+
+    # ------------- SAFE FOR ALTERING/EXTENSION -------------------
+    if page_selection == "Solution Overview":
+        st.title("Solution Overview")
+        st.write("Describe your winning approach on this page")
+
+
+
+    if page_selection == "Popcorn":
+        st.image('resources/videos/popcorn_gif_2.gif',use_column_width=True)
+
         st.write('### Enter Your Three Favorite Movies')
         col1, col2, col3 = st.beta_columns(3)
 
@@ -148,45 +186,18 @@ def main():
 
             movies_titles[col] = col_dict[key].selectbox(f'Select movie {col + 1}:', genre_year_movies_temp['title'].to_list())
             movies_ids[col] = movies_df[movies_df['title'] == movies_titles[col]]["movieId"].values
-            
 
 
-        # Perform top-10 movie recommendation generation
-        if sys == 'Content Based Filtering':
-            if col1.button("Recommend"):
-                try:
-                    with st.spinner('Crunching the numbers...'):
-                        top_recommendations = content_model(movies_titles,
-                                                            top_n=10)
-                    st.title("We think you'll like:")
-                    for i,j in enumerate(top_recommendations):
-                        st.subheader(str(i+1)+'. '+j)
-                except:
-                    st.error("Oops! Looks like this algorithm does't work.\
-                              We'll need to fix it!")
 
+        if col1.button("Recommend"):
+            # try:
+                with st.spinner('Crunching the numbers...'):
+                    top_recommendations = collab_model(movies_titles,
+                                                        top_n=10)
+                # st.write(top_recommendations)
 
-        if sys == 'Collaborative Based Filtering':
-            if col1.button("Recommend"):
-                try:
-                    with st.spinner('Crunching the numbers...'):
-                        top_recommendations = collab_model(movie_list=movies_ids,
-                                                           top_n=10)
-                    st.title("We think you'll like:")
-                    for i,j in enumerate(top_recommendations):
-                        st.subheader(str(i+1)+'. '+j)
-
-                except:
-                    st.error("Oops! Looks like this algorithm does't work.\
-                              We'll need to fix it!")
-        
-        
-        if sys == '1':
-            recommend = col1.button("Recommend")
-            if recommend:
-                predicted_movies_ids = content_model(movies_titles, 10)
-                st.write(predicted_movies_ids)
-                # predicted_movies_ids = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+                pred_ids = movies_df[movies_df["title"].isin(top_recommendations)]
+                # st.write(f"preds = {pred_ids['movieId'].values}")
                 new_col1, new_col2, new_col3, new_col4, new_col5 = st.beta_columns(5)
 
                 new_col_dict = {f'col_0': new_col1,
@@ -195,39 +206,30 @@ def main():
                                 f'col_3': new_col4,
                                 f'col_4': new_col5}
 
-                for i, id in enumerate(predicted_movies_ids[:5]):
+                for i, id in enumerate(pred_ids[:5].values):
                     
+                    # new_col_dict[f'col_{i}'].write(id)
+                    title_dict = {f'movie_{id[0]}_title': id[1]}
+                    # st.write(id[0])
 
-                    new_col_dict[f'col_{i}'].write(id)
-                    title_dict = {f'movie_{id}_title': movies_df[movies_df["movieId"] == id]["title"].values[0]}
-                    director_dict = {f'movie_{id}_director': imdb_df[imdb_df["movieId"] == id]["director"].values[0]}
-                    cast_dict = {f'movie_{id}_cast': imdb_df[imdb_df["movieId"] == id]["title_cast"].values[0]}
+                    # try:
+                    director_dict = {f'movie_{id[0]}_director': imdb_df[imdb_df["movieId"] == id[0]]["director"]}
+                    # st.markdown(f'director dict = {director_dict}')
+                    cast_dict = {f'movie_{id[0]}_cast': imdb_df[imdb_df["movieId"] == id[0]]["title_cast"]}
 
-                    search_keyword = title_dict[f'movie_{id}_title'].replace(' ', '+')
+                    search_keyword = title_dict[f'movie_{id[0]}_title'].replace(' ', '+')
                     html = urllib.request.urlopen("https://www.youtube.com/results?search_query=" + search_keyword + "+trailer")
                     video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
 
-                    new_col_dict[f'col_{i}'].title(title_dict[f'movie_{id}_title'])
+                    new_col_dict[f'col_{i}'].title(title_dict[f'movie_{id[0]}_title'])
                     new_col_dict[f'col_{i}'].video("https://www.youtube.com/watch?v=" + video_ids[0])
                     new_col_dict[f'col_{i}'].subheader("Director:")
-                    new_col_dict[f'col_{i}'].write(f" - {director_dict[f'movie_{id}_director']}")
+                    new_col_dict[f'col_{i}'].write(f" - {director_dict[f'movie_{id[0]}_director'].values[0]}")
 
                     new_col_dict[f'col_{i}'].subheader("Cast:")
-                    for member in cast_dict[f'movie_{id}_cast']:
-                        new_col_dict[f'col_{i}'].write(f" - {member}\n")   
-
-
-
-# -------------------------------------------------------------------
-
-# ------------- SAFE FOR ALTERING/EXTENSION -------------------
-    if page_selection == "Solution Overview":
-        st.title("Solution Overview")
-        st.write("Describe your winning approach on this page")
-
-
-                    # You may want to add more sections here for aspects such as an EDA,
-                    # or to provide your business pitch.
+                    for member in cast_dict[f'movie_{id[0]}_cast']:
+                        for name in member:
+                            new_col_dict[f'col_{i}'].write(f" - {name}\n")   
 
 
 if __name__ == '__main__':
